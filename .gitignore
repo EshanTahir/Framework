@@ -1,0 +1,20 @@
+.idea/
+.vs/
+/bin/
+/build/
+/out/
+/dist/
+ERROR.txt
+*.user
+*.suo
+*.sdf
+.DS_Store
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+
+# Proprietary / local-only (same policy as final .gitignore)
+vendor/FMOD/
+vendor/api/
+vendor/steamworks_sdk_165/
+vendor/TimeSystem.cs
