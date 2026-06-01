@@ -14,6 +14,7 @@ target_include_directories(Framework
         ${FW_ENGINE_ROOT}/vendor/spdlog/include
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog/sinks
+        ${FW_ENGINE_ROOT}/vendor/SDL2/include/SDL2
 )
 
 target_compile_definitions(Framework PUBLIC FW_USE_OPENGL=1 SDL_MAIN_HANDLED)
@@ -23,7 +24,9 @@ target_link_directories(Framework PUBLIC
 )
 
 target_link_libraries(Framework PUBLIC
-    opengl32
+    SDL2
+    SDL2_image
+    SDL2_ttf
 )
 
 if (FW_ENABLE_LUAU AND TARGET Luau.VM)
