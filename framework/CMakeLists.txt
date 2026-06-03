@@ -2,6 +2,10 @@
 
 set(FRAMEWORK_SOURCES
     Core/log.cpp
+    Events/inputEvent.cpp
+    Events/event.cpp
+    Events/appEvent.cpp
+    Events/keys.cpp
 )
 
 add_library(Framework STATIC ${FRAMEWORK_SOURCES})
