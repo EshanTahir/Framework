@@ -1,7 +1,11 @@
 # Engine library (no game sources). Linked by host games and samples/blank.
 
 set(FRAMEWORK_SOURCES
+    Core/application.cpp
     Core/log.cpp
+    Core/entryPoint.cpp
+    Core/window.cpp
+    Core/appIdentity.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp
