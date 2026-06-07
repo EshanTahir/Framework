@@ -23,6 +23,7 @@ target_include_directories(Framework
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog/sinks
         ${FW_ENGINE_ROOT}/vendor/SDL2/include/SDL2
+        ${FW_ENGINE_ROOT}/vendor/json
 )
 
 target_compile_definitions(Framework PUBLIC FW_USE_OPENGL=1 SDL_MAIN_HANDLED)
