@@ -1,6 +1,8 @@
 #include "application.h"
 #include "appIdentity.h"
 #include "log.h"
+#include "assetCache.h"
+#include "paths.h"
 #include "window.h"
 
 #include "SDL.h"
@@ -31,13 +33,18 @@ int main(int argc, char* args[])
         screen_width, screen_height, SDL_WINDOW_RESIZABLE);
 
     Window::GetInstance().SetWindow(main_window);
+    Paths::SetUserDataIdentity(AppIdentity::Org(), AppIdentity::App());
+    Paths::Init();
     GameRegisterContent();
+    AssetCache::GetInstance().Clear();
+    FW_CORE_INFO("Asset root: {0}", Paths::GetAssetRoot());
 
     auto app = CreateApplication();
     FW_CORE_INFO("Initialized app");
     app->Run();
     delete app;
 
+    AssetCache::GetInstance().Clear();
     Window::GetInstance().CleanUp();
     TTF_Quit();
     SDL_Quit();

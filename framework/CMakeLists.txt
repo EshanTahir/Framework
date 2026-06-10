@@ -5,7 +5,11 @@ set(FRAMEWORK_SOURCES
     Core/log.cpp
     Core/entryPoint.cpp
     Core/window.cpp
+    Core/paths.cpp
     Core/appIdentity.cpp
+    Core/userDataStore.cpp
+    Core/assetCache.cpp
+    Core/gameSettings.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp

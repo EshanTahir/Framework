@@ -1,7 +1,13 @@
 #pragma once
-namespace AppIdentity {
-inline void Set(const char*, const char*, const char*) {}
-inline const char* WindowTitle() { return "Framework"; }
-inline const char* Org() { return "Framework"; }
-inline const char* App() { return "Framework"; }
+
+#include <string>
+
+// Product-facing strings supplied by the game at boot (not Framework defaults).
+namespace AppIdentity
+{
+    void Set(const char* window_title, const char* org, const char* app);
+
+    const char* WindowTitle();
+    const char* Org();
+    const char* App();
 }
