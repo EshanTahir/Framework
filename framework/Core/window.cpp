@@ -1,4 +1,5 @@
 #include "window.h"
+#include "glContext.h"
 
 Window& Window::GetInstance()
 {
@@ -18,8 +19,7 @@ SDL_Window* Window::GetWindow()
 
 void Window::OnUpdate()
 {
-    if (window)
-        SDL_GL_SwapWindow(window);
+    GlContext::GetInstance().Swap();
 }
 
 void Window::CleanUp()

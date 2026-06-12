@@ -10,6 +10,8 @@ set(FRAMEWORK_SOURCES
     Core/userDataStore.cpp
     Core/assetCache.cpp
     Core/gameSettings.cpp
+    Core/glContext.cpp
+    Render/gl.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp
@@ -40,6 +42,7 @@ target_link_libraries(Framework PUBLIC
     SDL2
     SDL2_image
     SDL2_ttf
+    opengl32
 )
 
 if (FW_ENABLE_LUAU AND TARGET Luau.VM)

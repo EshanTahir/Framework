@@ -3,6 +3,7 @@
 #include "log.h"
 #include "assetCache.h"
 #include "paths.h"
+#include "glContext.h"
 #include "window.h"
 
 #include "SDL.h"
@@ -28,11 +29,18 @@ int main(int argc, char* args[])
         FW_CORE_CRITICAL("IMG_Init HAS FAILED. SDL_ERROR: {0}", SDL_GetError());
     TTF_Init();
 
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
     SDL_Window* main_window = SDL_CreateWindow(
         AppIdentity::WindowTitle(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        screen_width, screen_height, SDL_WINDOW_RESIZABLE);
+        screen_width, screen_height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     Window::GetInstance().SetWindow(main_window);
+    if (!GlContext::GetInstance().Init(main_window))
+        return 1;
     Paths::SetUserDataIdentity(AppIdentity::Org(), AppIdentity::App());
     Paths::Init();
     GameRegisterContent();
