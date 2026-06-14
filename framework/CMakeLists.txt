@@ -12,6 +12,8 @@ set(FRAMEWORK_SOURCES
     Core/gameSettings.cpp
     Core/glContext.cpp
     Render/gl.cpp
+    Render/renderer2d.cpp
+    Render/renderTarget.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp

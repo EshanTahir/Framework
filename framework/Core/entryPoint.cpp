@@ -3,6 +3,7 @@
 #include "log.h"
 #include "assetCache.h"
 #include "paths.h"
+#include "Render/renderer2d.h"
 #include "glContext.h"
 #include "window.h"
 
@@ -40,6 +41,8 @@ int main(int argc, char* args[])
 
     Window::GetInstance().SetWindow(main_window);
     if (!GlContext::GetInstance().Init(main_window))
+        return 1;
+    if (!Renderer2D::GetInstance().Init())
         return 1;
     Paths::SetUserDataIdentity(AppIdentity::Org(), AppIdentity::App());
     Paths::Init();
