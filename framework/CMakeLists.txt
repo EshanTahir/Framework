@@ -14,6 +14,8 @@ set(FRAMEWORK_SOURCES
     Render/gl.cpp
     Render/renderer2d.cpp
     Render/renderTarget.cpp
+    Render/presentPipeline.cpp
+    Render/worldAtlas.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp
