@@ -33,6 +33,7 @@ target_include_directories(Framework
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog/sinks
         ${FW_ENGINE_ROOT}/vendor/SDL2/include/SDL2
+        ${FW_ENGINE_ROOT}/vendor/ENTT
         ${FW_ENGINE_ROOT}/vendor/json
 )
 
