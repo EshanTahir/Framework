@@ -33,6 +33,7 @@ target_include_directories(Framework
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog
         ${FW_ENGINE_ROOT}/vendor/spdlog/include/spdlog/sinks
         ${FW_ENGINE_ROOT}/vendor/SDL2/include/SDL2
+        ${FW_ENGINE_ROOT}/vendor/box2D/include/box2d
         ${FW_ENGINE_ROOT}/vendor/ENTT
         ${FW_ENGINE_ROOT}/vendor/json
 )
@@ -41,12 +42,14 @@ target_compile_definitions(Framework PUBLIC FW_USE_OPENGL=1 SDL_MAIN_HANDLED)
 
 target_link_directories(Framework PUBLIC
     ${FW_ENGINE_ROOT}/vendor/SDL2/lib
+    ${FW_ENGINE_ROOT}/vendor/box2D/lib
 )
 
 target_link_libraries(Framework PUBLIC
     SDL2
     SDL2_image
     SDL2_ttf
+    box2d
     opengl32
 )
 
