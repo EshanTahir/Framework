@@ -1,4 +1,5 @@
 #include "application.h"
+#include "scene/sceneHandler.h"
 
 Application::Application(std::function<void()> AppStart, std::function<void(float)> AppUpdate, std::function<void()> AppEnd)
 : AppStart(AppStart), AppUpdate(AppUpdate), AppEnd(AppEnd)
@@ -30,6 +31,8 @@ void Application::Run()
             m_running = false;
 
         AppUpdate(delta_time);
+        scene_handler.GetActiveScene()->Update(delta_time);
+        SceneHandler::GetInstance().FlushPendingScene();
         window.OnUpdate();
     }
 }

@@ -4,6 +4,7 @@
 #include "Events/appEvent.h"
 #include "Events/event.h"
 #include "Events/inputEvent.h"
+#include "scene/sceneHandler.h"
 #include "window.h"
 
 #include <SDL.h>
@@ -30,5 +31,6 @@ private:
     bool m_running = true;
     float get_ticks_last_frame = 0;
     float ticks;
+    SceneHandler& scene_handler = SceneHandler::GetInstance();
     Window& window = Window::GetInstance();
 };

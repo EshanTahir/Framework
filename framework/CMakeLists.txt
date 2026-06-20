@@ -16,6 +16,17 @@ set(FRAMEWORK_SOURCES
     Render/renderTarget.cpp
     Render/presentPipeline.cpp
     Render/worldAtlas.cpp
+    Scene/entity.cpp
+    Scene/scene.cpp
+    Scene/sceneHandler.cpp
+    Scene/scripts.cpp
+    Scene/physics.cpp
+    Scene/renderer.cpp
+    Scene/sound.cpp
+    Scene/ui.cpp
+    Scene/particles.cpp
+    Utils/rect.cpp
+    Debug/debugHud.cpp
     Events/inputEvent.cpp
     Events/event.cpp
     Events/appEvent.cpp
