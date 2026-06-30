@@ -1,7 +1,7 @@
 #pragma once
 
 #include "box2d.h"
-struct FMOD_CHANNEL;
+#include "fmod.h"
 #include "SDL.h"
 
 #include <cstdint>

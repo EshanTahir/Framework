@@ -1,6 +1,7 @@
 #include "application.h"
 #include "appIdentity.h"
 #include "log.h"
+#include "Audio/audio.h"
 #include "assetCache.h"
 #include "paths.h"
 #include "Render/renderer2d.h"
@@ -48,6 +49,7 @@ int main(int argc, char* args[])
     Paths::Init();
     GameRegisterContent();
     AssetCache::GetInstance().Clear();
+    Audio::GetInstance().Init();
     FW_CORE_INFO("Asset root: {0}", Paths::GetAssetRoot());
 
     auto app = CreateApplication();

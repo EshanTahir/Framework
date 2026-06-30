@@ -1,7 +1,6 @@
 #pragma once
 
-struct FMOD_SYSTEM;
-struct FMOD_SOUND;
+#include "fmod.h"
 #include "SDL.h"
 #include "SDL_ttf.h"
 
