@@ -26,6 +26,7 @@ set(FRAMEWORK_SOURCES
     Scene/physics.cpp
     Scene/renderer.cpp
     Scene/sound.cpp
+    Scene/sfxPool.cpp
     Scene/ui.cpp
     Scene/particles.cpp
     Utils/rect.cpp
