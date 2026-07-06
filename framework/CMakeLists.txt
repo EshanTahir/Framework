@@ -35,6 +35,13 @@ set(FRAMEWORK_SOURCES
     Events/event.cpp
     Events/appEvent.cpp
     Events/keys.cpp
+    Match/matchConfig.cpp
+    Match/simClock.cpp
+    Match/matchChannels.cpp
+    Match/matchRand.cpp
+    Match/contentHash.cpp
+    Match/matchSession.cpp
+    Match/matchEvents.cpp
 )
 
 add_library(Framework STATIC ${FRAMEWORK_SOURCES})

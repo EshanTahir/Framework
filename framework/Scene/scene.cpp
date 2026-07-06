@@ -1,5 +1,8 @@
 #include "entity.h"
 #include "scene.h"
+#include "Match/simClock.h"
+#include "Match/matchSession.h"
+#include "Match/matchConfig.h"
 #include "Render/gl.h"
 #include "Core/log.h"
 
@@ -105,9 +108,14 @@ void Scene::FixedUpdate(float sim_dt, bool resample_input)
         auto& t = registry.get<TransformComponent>(e);
         t.ix = t.x; t.iy = t.y; t.ia = t.a; t.interp_primed = true;
     }
+    auto& session = MatchSession::GetInstance();
+    auto& clock = SimClock::GetInstance();
+    session.BeginSimTick(clock.Tick(), resample_input);
+    session.RecordSimInputs();
     scripts.Run(registry, sim_dt);
     physics.Run(registry, *world, sim_dt);
     scripts.RunPostPhys(registry, sim_dt);
+    clock.AdvanceTick();
 }
 
 void Scene::FrameUpdate(float real_dt)
@@ -126,7 +134,16 @@ void Scene::Update(float real_dt)
     if (renderer.window == nullptr)
         renderer.window = Window::GetInstance().GetWindow();
     ui.ProcessInput(registry);
-    FixedUpdate(real_dt, true);
+    auto& clock = SimClock::GetInstance();
+    const int steps = clock.BeginFrame(real_dt);
+    const float sim_dt = clock.SimDt();
+    if (clock.Paused())
+        scripts.RunTagged(registry, "pause_ui", real_dt);
+    else
+    {
+        for (int i = 0; i < steps; ++i)
+            FixedUpdate(sim_dt, i == 0);
+    }
     FrameUpdate(real_dt);
 }
 
