@@ -40,8 +40,11 @@ set(FRAMEWORK_SOURCES
     Match/matchChannels.cpp
     Match/matchRand.cpp
     Match/contentHash.cpp
+    Match/inputSampler.cpp
+    Match/inputRecorder.cpp
     Match/matchSession.cpp
     Match/matchEvents.cpp
+    Match/inputHistory.cpp
 )
 
 add_library(Framework STATIC ${FRAMEWORK_SOURCES})
