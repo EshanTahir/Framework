@@ -35,6 +35,8 @@ set(FRAMEWORK_SOURCES
     Events/event.cpp
     Events/appEvent.cpp
     Events/keys.cpp
+    Script/scriptEngine.cpp
+    Script/scriptInternal.cpp
     Match/matchConfig.cpp
     Match/simClock.cpp
     Match/matchChannels.cpp

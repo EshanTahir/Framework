@@ -1,6 +1,7 @@
 #include "application.h"
 #include "appIdentity.h"
 #include "log.h"
+#include "Script/scriptEngine.h"
 #include "Audio/audio.h"
 #include "assetCache.h"
 #include "paths.h"
@@ -49,6 +50,7 @@ int main(int argc, char* args[])
     Paths::Init();
     GameRegisterContent();
     AssetCache::GetInstance().Clear();
+    ScriptEngine::GetInstance().Init();
     Audio::GetInstance().Init();
     FW_CORE_INFO("Asset root: {0}", Paths::GetAssetRoot());
 
@@ -57,6 +59,7 @@ int main(int argc, char* args[])
     app->Run();
     delete app;
 
+    ScriptEngine::GetInstance().Shutdown();
     AssetCache::GetInstance().Clear();
     Window::GetInstance().CleanUp();
     TTF_Quit();

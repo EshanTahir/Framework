@@ -1,5 +1,6 @@
 #include "entity.h"
 #include "scene.h"
+#include "Script/scriptEngine.h"
 #include "Match/simClock.h"
 #include "Match/matchSession.h"
 #include "Match/matchConfig.h"
@@ -51,6 +52,9 @@ void Scene::DestroyEntity(entt::entity handle)
 {
     if (handle == entt::null || !registry.valid(handle))
         return;
+
+    if (registry.has<ScriptComponent>(handle))
+        ScriptEngine::GetInstance().DropEntity((uint32_t)handle);
 
     if (registry.has<RigidBody2DComponent>(handle))
     {
@@ -134,6 +138,7 @@ void Scene::Update(float real_dt)
     if (renderer.window == nullptr)
         renderer.window = Window::GetInstance().GetWindow();
     ui.ProcessInput(registry);
+    ScriptEngine::GetInstance().BeginFrame(real_dt);
     auto& clock = SimClock::GetInstance();
     const int steps = clock.BeginFrame(real_dt);
     const float sim_dt = clock.SimDt();
@@ -149,6 +154,14 @@ void Scene::Update(float real_dt)
 
 void Scene::Initialize()
 {
+    auto view = registry.view<ScriptComponent>();
+    for (auto e : view)
+    {
+        auto& sc = registry.get<ScriptComponent>(e);
+        sc.entering_scene = true;
+        sc.booted = false;
+        ScriptEngine::GetInstance().DropEntity((uint32_t)e);
+    }
     physics.Initialize(registry, *world);
 }
 
