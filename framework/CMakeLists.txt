@@ -37,6 +37,11 @@ set(FRAMEWORK_SOURCES
     Events/keys.cpp
     Script/scriptEngine.cpp
     Script/scriptInternal.cpp
+    Script/scriptBindsInput.cpp
+    Script/scriptBindsPhysics.cpp
+    Script/scriptBindsRender.cpp
+    Script/scriptBindsAudio.cpp
+    Script/scriptBindsUi.cpp
     Match/matchConfig.cpp
     Match/simClock.cpp
     Match/matchChannels.cpp
