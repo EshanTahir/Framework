@@ -52,6 +52,9 @@ set(FRAMEWORK_SOURCES
     Match/matchSession.cpp
     Match/matchEvents.cpp
     Match/inputHistory.cpp
+    Net/netSockets.cpp
+    Net/netSession.cpp
+    Net/netAsync.cpp
 )
 
 add_library(Framework STATIC ${FRAMEWORK_SOURCES})
@@ -87,6 +90,9 @@ target_link_libraries(Framework PUBLIC
     fmod_vc
     opengl32
 )
+if (WIN32)
+    target_link_libraries(Framework PUBLIC ws2_32)
+endif()
 
 if (FW_ENABLE_LUAU AND TARGET Luau.VM)
     target_include_directories(Framework PUBLIC

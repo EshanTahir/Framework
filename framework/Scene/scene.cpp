@@ -4,6 +4,8 @@
 #include "Match/simClock.h"
 #include "Match/matchSession.h"
 #include "Match/matchConfig.h"
+#include "Net/netSession.h"
+#include "Net/lobbyClient.h"
 #include "Render/gl.h"
 #include "Core/log.h"
 
@@ -112,14 +114,9 @@ void Scene::FixedUpdate(float sim_dt, bool resample_input)
         auto& t = registry.get<TransformComponent>(e);
         t.ix = t.x; t.iy = t.y; t.ia = t.a; t.interp_primed = true;
     }
-    auto& session = MatchSession::GetInstance();
-    auto& clock = SimClock::GetInstance();
-    session.BeginSimTick(clock.Tick(), resample_input);
-    session.RecordSimInputs();
     scripts.Run(registry, sim_dt);
     physics.Run(registry, *world, sim_dt);
     scripts.RunPostPhys(registry, sim_dt);
-    clock.AdvanceTick();
 }
 
 void Scene::FrameUpdate(float real_dt)
