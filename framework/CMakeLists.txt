@@ -50,6 +50,7 @@ set(FRAMEWORK_SOURCES
     Match/inputSampler.cpp
     Match/inputRecorder.cpp
     Match/matchSession.cpp
+    Match/matchNetSync.cpp
     Match/matchEvents.cpp
     Match/inputHistory.cpp
     Net/netSockets.cpp
