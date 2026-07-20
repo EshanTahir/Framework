@@ -56,6 +56,7 @@ set(FRAMEWORK_SOURCES
     Net/netSockets.cpp
     Net/netSession.cpp
     Net/netAsync.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/monocypher/monocypher.c
 )
 
 add_library(Framework STATIC ${FRAMEWORK_SOURCES})
@@ -73,6 +74,7 @@ target_include_directories(Framework
         ${FW_ENGINE_ROOT}/vendor/ENTT
         ${FW_ENGINE_ROOT}/vendor/FMOD/api/core/inc
         ${FW_ENGINE_ROOT}/vendor/json
+        ${FW_ENGINE_ROOT}/vendor/monocypher
 )
 
 target_compile_definitions(Framework PUBLIC FW_USE_OPENGL=1 SDL_MAIN_HANDLED)
