@@ -56,6 +56,10 @@ set(FRAMEWORK_SOURCES
     Net/netSockets.cpp
     Net/netSession.cpp
     Net/netAsync.cpp
+    Net/lobbyClient.cpp
+    Net/relayHostLink.cpp
+    Net/stunClient.cpp
+    Net/natPunch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/monocypher/monocypher.c
 )
 
