@@ -56,6 +56,10 @@ set(FRAMEWORK_SOURCES
     Net/netSockets.cpp
     Net/netSession.cpp
     Net/netAsync.cpp
+    Net/netCrypto.cpp
+    Net/netAeadSession.cpp
+    Net/netCtrlLink.cpp
+    Net/netInputGuard.cpp
     Net/lobbyClient.cpp
     Net/relayHostLink.cpp
     Net/stunClient.cpp
