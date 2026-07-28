@@ -41,7 +41,9 @@ set(FRAMEWORK_SOURCES
     Script/scriptBindsPhysics.cpp
     Script/scriptBindsRender.cpp
     Script/scriptBindsAudio.cpp
+    Script/scriptBindsMatch.cpp
     Script/scriptBindsUi.cpp
+    Script/scriptBindsMisc.cpp
     Match/matchConfig.cpp
     Match/simClock.cpp
     Match/matchChannels.cpp
