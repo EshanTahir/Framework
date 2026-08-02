@@ -55,6 +55,8 @@ set(FRAMEWORK_SOURCES
     Match/matchNetSync.cpp
     Match/matchEvents.cpp
     Match/inputHistory.cpp
+    Match/rollbackSession.cpp
+    Match/rollbackPack.cpp
     Net/netSockets.cpp
     Net/netSession.cpp
     Net/netAsync.cpp
