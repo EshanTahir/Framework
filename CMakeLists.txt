@@ -3,7 +3,7 @@ project(FrameworkEngine)
 set(CMAKE_CXX_STANDARD 17)
 
 option(FW_ENABLE_LUAU "Embed Luau VM" ON)
-option(FW_BUILD_BLANK_SAMPLE "Build samples/blank when this repo is the top-level project" OFF)
+option(FW_BUILD_BLANK_SAMPLE "Build samples/blank when this repo is the top-level project" ON)
 
 # Expect SDKs under ./vendor (not all committed). See README.
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/SDL2")
