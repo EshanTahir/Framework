@@ -13,8 +13,18 @@ CMakeCache.txt
 CMakeFiles/
 cmake-build-*/
 
-# Proprietary / local-only (same policy as final .gitignore)
+# Proprietary / local-only - not part of the public engine tree.
 vendor/FMOD/
 vendor/api/
 vendor/steamworks_sdk_165/
 vendor/TimeSystem.cs
+
+# Box2D testbed leftovers (Framework only needs libbox2d.a).
+vendor/box2D/lib/testbed.exe
+vendor/box2D/lib/unit_test.exe
+vendor/box2D/lib/libglad.a
+vendor/box2D/lib/libglfw.a
+vendor/box2D/lib/libimgui.a
+vendor/box2D/lib/libsajson.a
+vendor/box2D/lib/settings.ini
+vendor/SDL2/bin/sdl2-config
