@@ -56,6 +56,7 @@ constexpr GLenum GL_SCISSOR_TEST = 0x0C11;
 constexpr GLenum GL_DST_COLOR = 0x0306;
 constexpr GLenum GL_ZERO = 0;
 constexpr GLenum GL_ONE_MINUS_DST_COLOR = 0x0307;
+constexpr GLenum GL_ONE_MINUS_SRC_COLOR = 0x0301;
 constexpr GLenum GL_TEXTURE1 = 0x84C1;
 constexpr GLenum GL_RGBA8 = 0x8058;
 constexpr GLenum GL_TRIANGLE_STRIP = 0x0005;

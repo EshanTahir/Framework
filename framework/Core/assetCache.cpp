@@ -54,11 +54,14 @@ CachedTexture& AssetCache::GetTexture(const char* path)
     if (it != m_textures.end())
         return it->second;
 
-    CachedTexture tex;
+    CachedTexture tex{};
     tex.surface = IMG_Load(resolved.c_str());
     if (!tex.surface)
     {
         FW_CORE_ERROR("Failed to load image '{0}': {1}", resolved, IMG_GetError());
+        tex.gl_id = 0;
+        tex.width = 0;
+        tex.height = 0;
         m_textures[resolved] = tex;
         return m_textures[resolved];
     }
@@ -90,6 +93,14 @@ CachedTexture& AssetCache::GetTexture(const char* path)
     TouchMtime(resolved);
     m_textures[resolved] = tex;
     return m_textures[resolved];
+}
+
+bool AssetCache::HasUsableTexture(const char* path)
+{
+    if (!path || !path[0])
+        return false;
+    CachedTexture& tex = GetTexture(path);
+    return tex.gl_id != 0 && tex.width > 0 && tex.height > 0;
 }
 
 SDL_Surface* AssetCache::GetSurface(const char* path)

@@ -51,6 +51,23 @@ void main(){
   frag = vec4(mix(u_color, c.rgb, f), c.a);
 })";
 
+    const char* kLightingFS = R"(#version 330 core
+in vec2 v_uv;
+uniform sampler2D u_scene;
+uniform sampler2D u_light;
+uniform vec3 u_fill;
+uniform float u_strength;
+uniform vec2 u_maskSize;
+out vec4 frag;
+void main(){
+  vec4 scene = texture(u_scene, v_uv);
+  vec2 uvL = (floor(v_uv * u_maskSize) + 0.5) / u_maskSize;
+  float vis = texture(u_light, uvL).r;
+  vis = mix(1.0, vis, clamp(u_strength, 0.0, 1.0));
+  vec3 lit = mix(scene.rgb * u_fill, scene.rgb, vis);
+  frag = vec4(lit, scene.a);
+})";
+
     GLuint CompileProgram(const char* vs_src, const char* fs_src)
     {
         GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -110,13 +127,14 @@ bool PresentPipeline::Init()
     m_threshold = CompileProgram(kFsVS, kThresholdFS);
     m_blur = CompileProgram(kFsVS, kBlurFS);
     m_vignette = CompileProgram(kFsVS, kVignetteFS);
+    m_lighting = CompileProgram(kFsVS, kLightingFS);
 
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
     // No VBO - vertex shader uses gl_VertexID
     glBindVertexArray(0);
 
-    m_ready = m_blit && m_threshold && m_blur && m_vignette && m_vao;
+    m_ready = m_blit && m_threshold && m_blur && m_vignette && m_lighting && m_vao;
     if (m_ready)
         FW_CORE_INFO("PresentPipeline initialized");
     return m_ready;
@@ -129,6 +147,8 @@ void PresentPipeline::Shutdown()
     m_bloom_a.Destroy();
     m_bloom_b.Destroy();
     m_aperture.Destroy();
+    m_light_accum.Destroy();
+    m_light_scratch.Destroy();
     if (m_vao)
         glDeleteVertexArrays(1, &m_vao);
     if (m_blit)
@@ -139,7 +159,9 @@ void PresentPipeline::Shutdown()
         glDeleteProgram(m_blur);
     if (m_vignette)
         glDeleteProgram(m_vignette);
-    m_vao = m_blit = m_threshold = m_blur = m_vignette = 0;
+    if (m_lighting)
+        glDeleteProgram(m_lighting);
+    m_vao = m_blit = m_threshold = m_blur = m_vignette = m_lighting = 0;
     m_w = m_h = 0;
     m_ready = false;
 }
@@ -150,7 +172,7 @@ void PresentPipeline::EnsureSize(int w, int h)
         Init();
     if (w <= 0 || h <= 0)
         return;
-    if (w == m_w && h == m_h && m_scene.Valid())
+    if (w == m_w && h == m_h && m_scene.Valid() && m_light_accum.Valid())
         return;
     m_w = w;
     m_h = h;
@@ -160,6 +182,9 @@ void PresentPipeline::EnsureSize(int w, int h)
     m_bloom_a.Resize(std::max(1, w / 2), std::max(1, h / 2), true);
     m_bloom_b.Resize(std::max(1, w / 2), std::max(1, h / 2), true);
     m_aperture.Resize(std::max(64, w / 4), std::max(64, h / 4), false);
+    // light masks: half-res, nearest (pixel-snap upsample in composite)
+    m_light_accum.Resize(std::max(1, w / 2), std::max(1, h / 2), false);
+    m_light_scratch.Resize(std::max(1, w / 2), std::max(1, h / 2), false);
 }
 
 void PresentPipeline::DrawFullscreen(GLuint program, GLuint tex0, GLuint tex1)
@@ -297,6 +322,58 @@ void PresentPipeline::ApplyVignette(float strength, float r, float g, float b)
     glUniform1f(glGetUniformLocation(m_vignette, "u_strength"), strength);
     glUniform3f(glGetUniformLocation(m_vignette, "u_color"), r, g, b);
     DrawFullscreen(m_vignette, m_scene.Color());
+
+    m_scene.Bind();
+    BlitTexture(m_bright.Color());
+}
+
+void PresentPipeline::SetLightFill(float r, float g, float b, float strength)
+{
+    m_fill_r = r;
+    m_fill_g = g;
+    m_fill_b = b;
+    m_fill_strength = strength;
+}
+
+void PresentPipeline::GetLightFill(float& r, float& g, float& b, float& strength) const
+{
+    r = m_fill_r;
+    g = m_fill_g;
+    b = m_fill_b;
+    strength = m_fill_strength;
+}
+
+void PresentPipeline::CompositeLighting()
+{
+    if (m_fill_strength <= 0.f || !m_scene.Valid() || !m_light_accum.Valid()
+        || !m_bright.Valid() || !m_lighting)
+        return;
+
+    // ping through Bright (full-res), blit back to Scene - same as vignette
+    m_bright.Bind();
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glDisable(GL_BLEND);
+    glUseProgram(m_lighting);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_scene.Color());
+    glUniform1i(glGetUniformLocation(m_lighting, "u_scene"), 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_light_accum.Color());
+    glUniform1i(glGetUniformLocation(m_lighting, "u_light"), 1);
+    glUniform3f(glGetUniformLocation(m_lighting, "u_fill"), m_fill_r, m_fill_g, m_fill_b);
+    glUniform1f(glGetUniformLocation(m_lighting, "u_strength"), m_fill_strength);
+    glUniform2f(glGetUniformLocation(m_lighting, "u_maskSize"),
+                (float)m_light_accum.Width(), (float)m_light_accum.Height());
+    glBindVertexArray(m_vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m_scene.Bind();
     BlitTexture(m_bright.Color());

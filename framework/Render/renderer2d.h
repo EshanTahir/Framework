@@ -60,6 +60,11 @@ public:
                        float angle_rad, float r, float g, float b, float a,
                        bool world_space = true);
 
+    // four world corners → two tris, white tex (shadow prisms)
+    void DrawPoly4(float ax, float ay, float bx, float by,
+                   float cx, float cy, float dx, float dy,
+                   float r, float g, float b, float a);
+
     int DrawCalls() const { return m_draw_calls; }
     int QuadCount() const { return m_quads_drawn; }
     int ScreenWidth() const { return m_width; }

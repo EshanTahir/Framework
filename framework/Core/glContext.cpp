@@ -30,7 +30,9 @@ bool GlContext::Init(SDL_Window* window)
         return false;
     }
 
-    SDL_GetWindowSize(window, &m_width, &m_height);
+    SDL_GL_GetDrawableSize(window, &m_width, &m_height);
+    if (m_width < 1 || m_height < 1)
+        SDL_GetWindowSize(window, &m_width, &m_height);
     glViewport(0, 0, m_width, m_height);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -58,7 +60,26 @@ void GlContext::SetVSync(bool enabled)
 
 void GlContext::Resize(int w, int h)
 {
+    if (w < 1) w = 1;
+    if (h < 1) h = 1;
     m_width = w;
     m_height = h;
     glViewport(0, 0, w, h);
+}
+
+void GlContext::SyncFromWindow()
+{
+    if (!m_window)
+        return;
+    int w = 0, h = 0;
+    // drawable size matches the GL framebuffer (HiDPI-safe); fall back to window size
+    SDL_GL_GetDrawableSize(m_window, &w, &h);
+    if (w < 1 || h < 1)
+        SDL_GetWindowSize(m_window, &w, &h);
+    // ignore transient 0-size during mode switches
+    if (w < 2 || h < 2)
+        return;
+    if (w == m_width && h == m_height)
+        return;
+    Resize(w, h);
 }

@@ -168,6 +168,30 @@ void Renderer2D::DrawSolidQuad(float x, float y, float w, float h,
     DrawQuad(m_white_tex, x, y, w, h, 0, 0, 1, 1, angle_rad, r, g, b, a, world_space);
 }
 
+void Renderer2D::DrawPoly4(float ax, float ay, float bx, float by,
+                           float cx, float cy, float dx, float dy,
+                           float r, float g, float b, float a)
+{
+    if (m_white_tex == 0)
+        return;
+    if (m_current_tex != m_white_tex || m_current_pal != 0
+        || (int)m_batch.size() >= kMaxQuads * kVertsPerQuad)
+    {
+        FlushInternal();
+        m_current_tex = m_white_tex;
+        m_current_pal = 0;
+        m_current_pal_w = 1;
+        m_current_pal_h = 1;
+    }
+    // two tris: A-B-C and A-C-D
+    m_batch.push_back({ax, ay, 0.f, 0.f, r, g, b, a});
+    m_batch.push_back({bx, by, 1.f, 0.f, r, g, b, a});
+    m_batch.push_back({cx, cy, 1.f, 1.f, r, g, b, a});
+    m_batch.push_back({ax, ay, 0.f, 0.f, r, g, b, a});
+    m_batch.push_back({cx, cy, 1.f, 1.f, r, g, b, a});
+    m_batch.push_back({dx, dy, 0.f, 1.f, r, g, b, a});
+}
+
 void Renderer2D::Shutdown()
 {
     Flush();

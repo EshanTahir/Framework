@@ -26,6 +26,8 @@ public:
     bool enable_hot_reload = false;
 
     CachedTexture& GetTexture(const char* path);
+    // true if path loads (or is cached) with a usable GL texture
+    bool HasUsableTexture(const char* path);
     SDL_Surface* GetSurface(const char* path);
 
     TTF_Font* GetFont(const char* path, int size);

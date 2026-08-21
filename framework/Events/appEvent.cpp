@@ -33,6 +33,7 @@ void AppEvent::PollEvents()
                         app_events[window_close] = true;
                         break;
                     case SDL_WINDOWEVENT_RESIZED:
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
                         app_events[window_resize] = true;
                         break;
                     case SDL_WINDOWEVENT_FOCUS_LOST:

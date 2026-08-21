@@ -1,13 +1,13 @@
 #include "application.h"
 #include "appIdentity.h"
-#include "log.h"
-#include "Script/scriptEngine.h"
 #include "Audio/audio.h"
 #include "assetCache.h"
-#include "paths.h"
-#include "Render/renderer2d.h"
 #include "glContext.h"
+#include "log.h"
+#include "paths.h"
 #include "window.h"
+#include "Render/renderer2d.h"
+#include "Script/scriptEngine.h"
 
 #include "SDL.h"
 #include "SDL_image.h"
@@ -46,6 +46,7 @@ int main(int argc, char* args[])
         return 1;
     if (!Renderer2D::GetInstance().Init())
         return 1;
+
     Paths::SetUserDataIdentity(AppIdentity::Org(), AppIdentity::App());
     Paths::Init();
     GameRegisterContent();

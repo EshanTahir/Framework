@@ -32,6 +32,7 @@ void EventHandler::pollEvents()
                         application_events.push_back(event);
                         break;
                     case SDL_WINDOWEVENT_RESIZED:
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
                         application_events.push_back(event);
                         break;
                     case SDL_WINDOWEVENT_FOCUS_LOST:

@@ -12,6 +12,8 @@ public:
     void Swap();
     void SetVSync(bool enabled);
     void Resize(int w, int h);
+    // pull size from the SDL window (resize / maximize / OS fullscreen)
+    void SyncFromWindow();
 
     int Width() const { return m_width; }
     int Height() const { return m_height; }

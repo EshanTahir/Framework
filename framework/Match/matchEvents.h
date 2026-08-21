@@ -28,7 +28,7 @@ struct MatchEventWire
     float volume = 1.f;
     float x = 0.f;
     float y = 0.f;
-    // Long pack paths (Helton Yan…); keep same-build host+client.
+    // Long pack paths (Helton Yan...); keep same-build host+client.
     char name[160]{};
 };
 #pragma pack(pop)

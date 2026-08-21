@@ -27,12 +27,17 @@ void Application::Run()
         app_event.PollEvents();
         input_event.PollEvents();
 
+
         if (app_event.AppQuit())
+        {
             m_running = false;
+        }
 
         AppUpdate(delta_time);
         scene_handler.GetActiveScene()->Update(delta_time);
+        // Scripts request scene changes mid-Update; apply between frames.
         SceneHandler::GetInstance().FlushPendingScene();
+
         window.OnUpdate();
     }
 }

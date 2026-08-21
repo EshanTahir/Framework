@@ -23,7 +23,7 @@ public:
     float GetBusVolume(AudioBus bus) const;
 
     // Play a cached one-shot/loop on a bus; returns channel or nullptr.
-    // pan: -1 left … 0 center … +1 right (2D stereo; not FMOD 3D).
+    // pan: -1 left ... 0 center ... +1 right (2D stereo; not FMOD 3D).
     FMOD_CHANNEL* Play(const char* path, AudioBus bus, float volume, bool looping, float pan = 0.f);
 
     // Fake-2D spatial: listener at camera, distance gain + stereo pan.

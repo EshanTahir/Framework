@@ -18,4 +18,5 @@ static AppEvent& app_event = AppEvent::GetInstance();
 static InputEvent& input_event = InputEvent::GetInstance();
 
 static SceneHandler& scene_handler = SceneHandler::GetInstance();
+
 static Window& window = Window::GetInstance();
