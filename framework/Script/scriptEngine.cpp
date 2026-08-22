@@ -9,7 +9,10 @@
 #include "Events/inputEvent.h"
 #include "Events/keys.h"
 #include "Match/simClock.h"
+#include "Render/presentPipeline.h"
 #include "Render/worldAtlas.h"
+#include "Scene/entity.h"
+#include "Scene/occluderWorld.h"
 #include "Scene/sceneHandler.h"
 #include "Scene/systems.h"
 

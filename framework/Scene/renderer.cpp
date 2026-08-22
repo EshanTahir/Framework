@@ -1,11 +1,17 @@
 #include "systems.h"
+#include "occluderWorld.h"
 #include "Core/assetCache.h"
 #include "Core/gameSettings.h"
 #include "Core/glContext.h"
+#include "Core/log.h"
 #include "Match/simClock.h"
 #include "Render/presentPipeline.h"
 #include "Render/renderer2d.h"
 #include "Render/worldAtlas.h"
+
+#ifdef DrawText
+#undef DrawText
+#endif
 
 #include "SDL.h"
 #include "SDL_ttf.h"
@@ -207,6 +213,8 @@ void Renderer::Run(entt::registry& registry, float delta_time)
     auto& present = PresentPipeline::GetInstance();
     auto& settings = GameSettings::GetInstance();
 
+    // keep RT / blit viewport matched to the real window (maximize, OS fullscreen, drag-resize)
+    gl.SyncFromWindow();
     const int sw = gl.Width();
     const int sh = gl.Height();
     r2d.SetScreenSize(sw, sh);
@@ -244,11 +252,32 @@ void Renderer::Run(entt::registry& registry, float delta_time)
 
     DrawWorldPass(registry, delta_time, master, settings.ParallaxEnabled());
 
+    r2d.Flush();
+    r2d.EndFrame();
+
+    // key 9 (draw_world_textures off): skip LightAccum + Composite
+    // ReduceFlash: keep masks; dim volumes/shafts later; skip Bright+bloom below
+    const bool do_lighting = draw_world_textures && present.LightFillStrength() > 0.f;
+    if (do_lighting)
+    {
+        OccluderWorld::Get().UpdateDynamics(registry, m_view_x0, m_view_y0, m_view_x1, m_view_y1);
+        BuildLightAccum(registry, master);
+        present.CompositeLighting();
+    }
+
+    present.Scene().Bind();
+    r2d.BeginBatch();
+    r2d.SetScreenSize(sw, sh);
+    r2d.SetCamera(master);
+
     DrawLightVolumes(registry);
     DrawLightShafts(registry, delta_time);
 
     if (settings.AperturesEnabled() && !m_drawing_aperture)
         RenderApertures(registry, delta_time, master);
+
+    if (OccluderWorld::Get().debug_draw)
+        DrawOccluderDebug(registry);
 
     if (draw_debug_colliders)
     {
@@ -403,6 +432,279 @@ void Renderer::DrawEmissiveMask(entt::registry& registry)
     }
 }
 
+void Renderer::EnsureRadialTex()
+{
+    if (m_radial_tex)
+        return;
+    constexpr int N = 128;
+    std::vector<unsigned char> px((size_t)N * N * 4);
+    for (int y = 0; y < N; ++y)
+    {
+        for (int x = 0; x < N; ++x)
+        {
+            float u = (x + 0.5f) / (float)N;
+            float v = (y + 0.5f) / (float)N;
+            float dx = u - 0.5f, dy = v - 0.5f;
+            float d = std::sqrt(dx * dx + dy * dy) * 2.f;
+            float a = std::clamp(1.f - d, 0.f, 1.f);
+            a = a * a;
+            unsigned char c = (unsigned char)(a * 255.f + 0.5f);
+            size_t i = ((size_t)y * N + (size_t)x) * 4;
+            px[i] = px[i + 1] = px[i + 2] = px[i + 3] = c;
+        }
+    }
+    glGenTextures(1, &m_radial_tex);
+    glBindTexture(GL_TEXTURE_2D, m_radial_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, N, N, 0, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Renderer::DrawSpotDarkWedges(Renderer2D& r2d, float lx, float ly, float R,
+                                  float aim, float outer)
+{
+    // after radial: subtract two large wedges covering the dark side of the cone
+    constexpr float kTwoPi = 6.28318530718f;
+    if (outer >= kTwoPi - 1e-3f)
+        return;
+    float BIG = R * 4.f;
+    float start = aim + outer * 0.5f;
+    float span = kTwoPi - outer;
+    for (int i = 0; i < 2; ++i)
+    {
+        float t0 = start + span * (i * 0.5f);
+        float t1 = start + span * ((i + 1) * 0.5f);
+        float mid = (t0 + t1) * 0.5f;
+        float ax = lx + std::cos(t0) * BIG;
+        float ay = ly + std::sin(t0) * BIG;
+        float mx = lx + std::cos(mid) * BIG * 1.25f;
+        float my = ly + std::sin(mid) * BIG * 1.25f;
+        float bx = lx + std::cos(t1) * BIG;
+        float by = ly + std::sin(t1) * BIG;
+        r2d.DrawPoly4(lx, ly, ax, ay, mx, my, bx, by, 1.f, 1.f, 1.f, 1.f);
+    }
+}
+
+bool SegmentFacesLight(const OccluderSegment& s, float lx, float ly)
+{
+    float mx = (s.ax + s.bx) * 0.5f;
+    float my = (s.ay + s.by) * 0.5f;
+    float dx = mx - lx, dy = my - ly;
+    return (dx * s.nx + dy * s.ny) > 0.f;
+}
+
+void Renderer::RenderOneLightCutout(const PointLightComponent& L, float lx, float ly,
+                                    Renderer2D& r2d)
+{
+    float R = L.radius;
+    float BIG = R * 4.f;
+    auto& occ = OccluderWorld::Get();
+
+    // 1) add radial
+    glBlendFunc(GL_ONE, GL_ONE);
+    float ir = L.r * L.intensity;
+    float ig = L.g * L.intensity;
+    float ib = L.b * L.intensity;
+    r2d.DrawQuad(m_radial_tex, lx, ly, 2.f * R, 2.f * R, 0.f, 0.f, 1.f, 1.f, 0.f, ir, ig, ib, 1.f);
+    r2d.Flush();
+
+    // 2) subtract shadow quads + spot wedges
+    glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+    if (L.outer < 6.283185f - 1e-3f)
+        DrawSpotDarkWedges(r2d, lx, ly, R, L.aim, L.outer);
+
+    std::vector<const OccluderSegment*> segs;
+    occ.QueryAABB(lx - R, ly - R, lx + R, ly + R, segs);
+    for (const OccluderSegment* sp : segs)
+    {
+        const auto& s = *sp;
+        if (!SegmentFacesLight(s, lx, ly))
+            continue;
+        float lax = s.ax - lx, lay = s.ay - ly;
+        float lbx = s.bx - lx, lby = s.by - ly;
+        float la = std::sqrt(lax * lax + lay * lay);
+        float lb = std::sqrt(lbx * lbx + lby * lby);
+        if (la < 1e-4f || lb < 1e-4f)
+            continue;
+        float a2x = s.ax + (lax / la) * BIG;
+        float a2y = s.ay + (lay / la) * BIG;
+        float b2x = s.bx + (lbx / lb) * BIG;
+        float b2y = s.by + (lby / lb) * BIG;
+        float dax = a2x - s.ax, day = a2y - s.ay;
+        float dbx = b2x - s.bx, dby = b2y - s.by;
+        if (dax * dax + day * day < 1e-8f || dbx * dbx + dby * dby < 1e-8f)
+            continue;
+        r2d.DrawPoly4(s.ax, s.ay, s.bx, s.by, b2x, b2y, a2x, a2y, 1.f, 1.f, 1.f, 1.f);
+    }
+    r2d.Flush();
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void Renderer::ApplySunShadows(entt::registry& registry, Renderer2D& r2d)
+{
+    auto view = registry.view<DirectionalLightComponent>();
+    DirectionalLightComponent* sun = nullptr;
+    for (auto e : view)
+    {
+        auto& d = registry.get<DirectionalLightComponent>(e);
+        if (d.enabled)
+        {
+            sun = &d;
+            break;
+        }
+    }
+    if (!sun)
+        return;
+
+    float dx = sun->dx, dy = sun->dy;
+    float len = std::sqrt(dx * dx + dy * dy);
+    if (len < 1e-5f)
+        return;
+    dx /= len;
+    dy /= len;
+    float BIG = 80.f;
+    float crush = std::clamp(sun->fill, 0.f, 1.f);
+
+    // base outdoor vis then subtract parallel extrusions
+    // (accum already cleared to 1 when sun path is taken)
+
+    auto& occ = OccluderWorld::Get();
+    std::vector<const OccluderSegment*> segs;
+    occ.QueryAABB(m_view_x0 - 2.f, m_view_y0 - 2.f, m_view_x1 + 2.f, m_view_y1 + 2.f, segs);
+
+    glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+    for (const OccluderSegment* sp : segs)
+    {
+        const auto& s = *sp;
+        // facing -sun
+        if ((s.nx * (-dx) + s.ny * (-dy)) <= 0.f)
+            continue;
+        float a2x = s.ax + dx * BIG;
+        float a2y = s.ay + dy * BIG;
+        float b2x = s.bx + dx * BIG;
+        float b2y = s.by + dy * BIG;
+        r2d.DrawPoly4(s.ax, s.ay, s.bx, s.by, b2x, b2y, a2x, a2y, crush, crush, crush, 1.f);
+    }
+    r2d.Flush();
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void Renderer::BuildLightAccum(entt::registry& registry, const Camera2D& cam)
+{
+    EnsureRadialTex();
+    auto& pipe = PresentPipeline::GetInstance();
+    auto& accum = pipe.LightAccum();
+    auto& scratch = pipe.LightScratch();
+    if (!accum.Valid() || !scratch.Valid())
+        return;
+
+    auto& r2d = Renderer2D::GetInstance();
+    const int sw = pipe.SceneWidth();
+    const int sh = pipe.SceneHeight();
+
+    // L4.5 stub: Path D occlusion map not implemented; log once if tagged casters exist
+    {
+        static bool logged_path_d = false;
+        if (!logged_path_d)
+        {
+            auto locc = registry.view<LightOccluderComponent>();
+            for (auto e : locc)
+            {
+                const auto& lo = registry.get<LightOccluderComponent>(e);
+                if (lo.enabled && lo.casts_shadow_from_sprite)
+                {
+                    logged_path_d = true;
+                    FW_CORE_INFO("BuildOcclusionMapForLight: Path D stub (no-op); "
+                                 "casts_shadow_from_sprite skips Path A only");
+                    break;
+                }
+            }
+        }
+    }
+
+    bool any_sun = false;
+    {
+        auto dv = registry.view<DirectionalLightComponent>();
+        for (auto e : dv)
+        {
+            if (registry.get<DirectionalLightComponent>(e).enabled)
+            {
+                any_sun = true;
+                break;
+            }
+        }
+    }
+
+    accum.Bind();
+    if (any_sun)
+        glClearColor(1.f, 1.f, 1.f, 1.f);
+    else
+        glClearColor(0.f, 0.f, 0.f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    r2d.BeginBatch();
+    r2d.SetCamera(cam);
+    r2d.SetScreenSize(sw, sh); // FULL ortho even on half-res FBO
+
+    if (any_sun)
+        ApplySunShadows(registry, r2d);
+
+    constexpr int kMaxShadowLights = 8;
+    int count = 0;
+    auto view = registry.view<PointLightComponent, TransformComponent>();
+    for (auto e : view)
+    {
+        auto& L = registry.get<PointLightComponent>(e);
+        if (!L.enabled || L.additive || !L.casts_shadow)
+            continue;
+        auto& T = registry.get<TransformComponent>(e);
+        if (!InView(T.x, T.y, L.radius, L.radius))
+            continue;
+        if (++count > kMaxShadowLights)
+            break;
+
+        // cutout into scratch
+        scratch.Bind();
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        r2d.BeginBatch();
+        r2d.SetCamera(cam);
+        r2d.SetScreenSize(sw, sh);
+        RenderOneLightCutout(L, T.x, T.y, r2d);
+        r2d.Flush();
+        r2d.EndFrame();
+
+        // ADD scratch into accum - never multiply masks
+        accum.Bind();
+        pipe.BlitTexture(scratch.Color(), 1.f, 1.f, 1.f, 1.f, true);
+    }
+}
+
+void Renderer::DrawOccluderDebug(entt::registry& registry)
+{
+    (void)registry;
+    auto& r2d = Renderer2D::GetInstance();
+    auto& occ = OccluderWorld::Get();
+    r2d.Flush();
+    for (const auto& s : occ.Statics())
+    {
+        r2d.DrawLine(s.ax, s.ay, s.bx, s.by, 1.f, 0.f, 1.f, 1.f);
+        float mx = (s.ax + s.bx) * 0.5f;
+        float my = (s.ay + s.by) * 0.5f;
+        r2d.DrawLine(mx, my, mx + s.nx * 0.25f, my + s.ny * 0.25f, 1.f, 0.4f, 1.f, 1.f);
+    }
+    for (const auto& s : occ.Dynamics())
+    {
+        r2d.DrawLine(s.ax, s.ay, s.bx, s.by, 1.f, 0.2f, 0.8f, 1.f);
+        float mx = (s.ax + s.bx) * 0.5f;
+        float my = (s.ay + s.by) * 0.5f;
+        r2d.DrawLine(mx, my, mx + s.nx * 0.25f, my + s.ny * 0.25f, 1.f, 0.5f, 1.f, 1.f);
+    }
+}
+
 void Renderer::DrawLightVolumes(entt::registry& registry)
 {
     auto& r2d = Renderer2D::GetInstance();
@@ -424,9 +726,9 @@ void Renderer::DrawLightVolumes(entt::registry& registry)
         if (lv.multiply)
         {
             glBlendFunc(GL_DST_COLOR, GL_ZERO);
-            float ir = std::clamp(lv.r, 0.15f, 1.f);
-            float ig = std::clamp(lv.g, 0.15f, 1.f);
-            float ib = std::clamp(lv.b, 0.15f, 1.f);
+            float ir = std::clamp(lv.r, 0.02f, 1.f);
+            float ig = std::clamp(lv.g, 0.02f, 1.f);
+            float ib = std::clamp(lv.b, 0.02f, 1.f);
             r2d.DrawSolidQuad(d.x, d.y, lv.half_w * 2.f, lv.half_h * 2.f, d.a, ir, ig, ib, 1.f);
         }
         else
@@ -1035,6 +1337,8 @@ void Renderer::DrawTileMaps(entt::registry& registry)
 
         auto& tex = AssetCache::GetInstance().GetTexture(sheet.image_location);
         unsigned int id = tex.gl_id;
+        if (!id || tex.width <= 0 || tex.height <= 0)
+            continue;
 
         int y = 0;
         for (auto& row : grid)

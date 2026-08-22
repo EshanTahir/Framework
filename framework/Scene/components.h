@@ -260,6 +260,58 @@ struct LightShaftComponent
     float scroll = 0.f; // optional phase
 };
 
+// Celeste cutout lamp (L2+). Transform = light origin.
+struct PointLightComponent
+{
+    float radius = 4.f;
+    float r = 1.f, g = 0.92f, b = 0.75f;
+    float intensity = 1.f;
+    float inner = 0.f;       // L5 spot: inner cone rad
+    float outer = 6.283185f; // L5: outer cone; 2π = omni
+    float aim = 0.f;         // L5: world aim rad (Y-down)
+    bool casts_shadow = true;
+    bool additive = false; // true: skip mask; glow via volume instead
+    bool enabled = true;
+};
+
+// Authored sun dir - not a TOD clock.
+struct DirectionalLightComponent
+{
+    float dx = 0.35f, dy = 0.94f; // Y-down
+    float fill = 0.35f;           // how hard sun shadows crush vis
+    bool enabled = true;
+};
+
+// Optional light hull - may differ from Collider2D (Hybrid E Path B/C/D).
+struct LightOccluderComponent
+{
+    enum class Source : uint8_t
+    {
+        Box,
+        Polygon,
+        FromCollider,
+        SpriteSilhouette,
+        SpriteAlphaMap
+    };
+    Source source = Source::Box;
+
+    float half_w = 0.5f, half_h = 0.5f;
+    std::vector<float> local_xy; // Polygon: x0,y0,x1,y1,... CCW
+    bool one_way_top_only = false;
+
+    // Path C / D
+    bool casts_shadow_from_sprite = false;
+    float alpha_cutoff = 0.5f;
+    bool silhouette_dirty = true;
+    uint32_t last_sheet_frame = ~0u;
+    bool flip_x = false, flip_y = false;
+
+    bool enabled = true;
+    bool self_shadow = false;
+    uint32_t light_mask = 0xFFFFFFFFu;
+    uint32_t solid_id = 0;
+};
+
 // Nested "postcard" view. view_cam = entity with Camera+Transform looking elsewhere.
 struct ApertureComponent
 {

@@ -102,6 +102,8 @@ public:
     void DrawLightShafts(entt::registry& registry, float delta_time);
     void DrawApertureFrames(entt::registry& registry);
     void DrawEmissiveMask(entt::registry& registry);
+    void BuildLightAccum(entt::registry& registry, const Camera2D& cam);
+    void DrawOccluderDebug(entt::registry& registry);
 
     // Last-frame sprite submit stats (reset each world pass).
     int sprites_seen = 0;
@@ -112,6 +114,7 @@ public:
     SDL_Window* window = nullptr;
     bool draw_debug_colliders = false;
     // When false: skip sprites / sheets / tilemaps; force DebugDraw boxes (classic look).
+    // Key 9: also skips LightAccum + CompositeLighting.
     bool draw_world_textures = true;
     // clear / sky color (0-1; scripts may pass 0-255).
     float clear_r = 0.06f;
@@ -123,6 +126,12 @@ private:
     void DrawWorldPass(entt::registry& registry, float delta_time, const Camera2D& master, bool parallax_on);
     void RenderApertures(entt::registry& registry, float delta_time, const Camera2D& master);
     void UpdateViewCull(const Camera2D& master);
+    void EnsureRadialTex();
+    void RenderOneLightCutout(const PointLightComponent& L, float lx, float ly,
+                              Renderer2D& r2d);
+    void ApplySunShadows(entt::registry& registry, Renderer2D& r2d);
+    void DrawSpotDarkWedges(Renderer2D& r2d, float lx, float ly, float R,
+                            float aim, float outer);
     static int EntityBand(entt::registry& registry, entt::entity e);
     static float EntityParallax(entt::registry& registry, entt::entity e);
     bool BandMatch(entt::registry& registry, entt::entity e) const;
@@ -138,6 +147,8 @@ private:
     // World AABB of the gameplay camera (+ margin), for sprite cull.
     float m_view_x0 = 0, m_view_y0 = 0, m_view_x1 = 0, m_view_y1 = 0;
     bool m_view_cull_on = false;
+
+    unsigned int m_radial_tex = 0;
 };
 
 class Sound : public System

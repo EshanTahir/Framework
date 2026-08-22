@@ -5,9 +5,11 @@
 #include "Core/glContext.h"
 #include "Core/log.h"
 #include "Core/paths.h"
+#include "Render/presentPipeline.h"
 #include "Render/renderer2d.h"
 #include "Render/worldAtlas.h"
 #include "Scene/entity.h"
+#include "Scene/occluderWorld.h"
 #include "Scene/sceneHandler.h"
 #include "lua.h"
 #include "lualib.h"
@@ -115,6 +117,165 @@ int l_set_emissive(lua_State* L)
     if (!g_registry->has<EmissiveComponent>(e))
         g_registry->emplace<EmissiveComponent>(e);
     g_registry->get<EmissiveComponent>(e).strength = strength;
+    return 0;
+}
+
+static void NormRgb(float& r, float& g, float& b)
+{
+    if (r > 1.f || g > 1.f || b > 1.f) { r /= 255.f; g /= 255.f; b /= 255.f; }
+}
+
+int l_set_light_volume(lua_State* L)
+{
+    int id = (int)luaL_checkinteger(L, 1);
+    float r = (float)luaL_checknumber(L, 2);
+    float g = (float)luaL_checknumber(L, 3);
+    float b = (float)luaL_checknumber(L, 4);
+    float intensity = (float)luaL_checknumber(L, 5);
+    bool multiply = lua_gettop(L) >= 6 && lua_toboolean(L, 6) != 0;
+    NormRgb(r, g, b);
+    if (!g_registry) return 0;
+    auto e = EntityFromId(id);
+    if (!g_registry->valid(e)) return 0;
+    if (!g_registry->has<LightVolumeComponent>(e))
+        g_registry->emplace<LightVolumeComponent>(e);
+    auto& lv = g_registry->get<LightVolumeComponent>(e);
+    lv.r = r; lv.g = g; lv.b = b;
+    lv.intensity = intensity;
+    lv.multiply = multiply;
+    return 0;
+}
+
+int l_set_light_volume_size(lua_State* L)
+{
+    int id = (int)luaL_checkinteger(L, 1);
+    float hw = (float)luaL_checknumber(L, 2);
+    float hh = (float)luaL_checknumber(L, 3);
+    if (!g_registry) return 0;
+    auto e = EntityFromId(id);
+    if (!g_registry->valid(e)) return 0;
+    if (!g_registry->has<LightVolumeComponent>(e))
+        g_registry->emplace<LightVolumeComponent>(e);
+    auto& lv = g_registry->get<LightVolumeComponent>(e);
+    lv.half_w = hw;
+    lv.half_h = hh;
+    return 0;
+}
+
+int l_set_light_shaft(lua_State* L)
+{
+    int id = (int)luaL_checkinteger(L, 1);
+    float len = (float)luaL_checknumber(L, 2);
+    float width = (float)luaL_checknumber(L, 3);
+    float r = (float)luaL_checknumber(L, 4);
+    float g = (float)luaL_checknumber(L, 5);
+    float b = (float)luaL_checknumber(L, 6);
+    float a = (float)luaL_checknumber(L, 7);
+    NormRgb(r, g, b);
+    if (!g_registry) return 0;
+    auto e = EntityFromId(id);
+    if (!g_registry->valid(e)) return 0;
+    if (!g_registry->has<LightShaftComponent>(e))
+        g_registry->emplace<LightShaftComponent>(e);
+    auto& sh = g_registry->get<LightShaftComponent>(e);
+    sh.length = len;
+    sh.width = width;
+    sh.r = r; sh.g = g; sh.b = b; sh.a = a;
+    return 0;
+}
+
+int l_set_light_fill(lua_State* L)
+{
+    float r = (float)luaL_checknumber(L, 1);
+    float g = (float)luaL_checknumber(L, 2);
+    float b = (float)luaL_checknumber(L, 3);
+    float strength = (float)luaL_checknumber(L, 4);
+    NormRgb(r, g, b);
+    PresentPipeline::GetInstance().SetLightFill(r, g, b, strength);
+    return 0;
+}
+
+int l_get_light_fill(lua_State* L)
+{
+    float r, g, b, s;
+    PresentPipeline::GetInstance().GetLightFill(r, g, b, s);
+    lua_pushnumber(L, r);
+    lua_pushnumber(L, g);
+    lua_pushnumber(L, b);
+    lua_pushnumber(L, s);
+    return 4;
+}
+
+int l_rebuild_occluders(lua_State* L)
+{
+    (void)L;
+    if (!g_registry) return 0;
+    OccluderWorld::Get().RebuildStatics(*g_registry);
+    return 0;
+}
+
+int l_set_debug_occluders(lua_State* L)
+{
+    OccluderWorld::Get().debug_draw = lua_toboolean(L, 1) != 0;
+    return 0;
+}
+
+int l_spawn_point_light(lua_State* L)
+{
+    const char* tag = luaL_checkstring(L, 1);
+    float x = (float)luaL_checknumber(L, 2);
+    float y = (float)luaL_checknumber(L, 3);
+    float radius = (float)luaL_checknumber(L, 4);
+    float r = (float)luaL_checknumber(L, 5);
+    float g = (float)luaL_checknumber(L, 6);
+    float b = (float)luaL_checknumber(L, 7);
+    float intensity = (float)luaL_checknumber(L, 8);
+    bool casts = true;
+    if (lua_gettop(L) >= 9)
+        casts = lua_toboolean(L, 9) != 0;
+    NormRgb(r, g, b);
+
+    Scene* scene = SceneHandler::GetInstance().GetActiveScene();
+    if (!scene) { lua_pushnil(L); return 1; }
+
+    Entity existing = scene->GetEntity(tag);
+    Entity e = existing.GetHandle() != entt::null ? existing : scene->CreateEntity(tag);
+    if (!e.HasComponent<TransformComponent>())
+        e.AddComponent<TransformComponent>();
+    if (!e.HasComponent<PointLightComponent>())
+        e.AddComponent<PointLightComponent>();
+    auto& t = e.GetComponent<TransformComponent>();
+    t.x = x; t.y = y;
+    auto& pl = e.GetComponent<PointLightComponent>();
+    pl.radius = radius;
+    pl.r = r; pl.g = g; pl.b = b;
+    pl.intensity = intensity;
+    pl.casts_shadow = casts;
+    pl.enabled = true;
+    lua_pushinteger(L, (int)(uint32_t)e.GetHandle());
+    return 1;
+}
+
+int l_set_point_light(lua_State* L)
+{
+    int id = (int)luaL_checkinteger(L, 1);
+    float r = (float)luaL_checknumber(L, 2);
+    float g = (float)luaL_checknumber(L, 3);
+    float b = (float)luaL_checknumber(L, 4);
+    float intensity = (float)luaL_checknumber(L, 5);
+    float radius = (float)luaL_checknumber(L, 6);
+    NormRgb(r, g, b);
+    if (!g_registry) return 0;
+    auto e = EntityFromId(id);
+    if (!g_registry->valid(e)) return 0;
+    if (!g_registry->has<PointLightComponent>(e))
+        g_registry->emplace<PointLightComponent>(e);
+    auto& pl = g_registry->get<PointLightComponent>(e);
+    pl.r = r; pl.g = g; pl.b = b;
+    pl.intensity = intensity;
+    pl.radius = radius;
+    if (lua_gettop(L) >= 7)
+        pl.casts_shadow = lua_toboolean(L, 7) != 0;
     return 0;
 }
 
@@ -822,15 +983,32 @@ int l_set_box_draw(lua_State* L)
     return 0;
 }
 
+int l_texture_ok(lua_State* L)
+{
+    const char* path = luaL_checkstring(L, 1);
+    lua_pushboolean(L, AssetCache::GetInstance().HasUsableTexture(path) ? 1 : 0);
+    return 1;
+}
+
 void RegisterRenderBindsImpl(lua_State* L)
 {
 #define BIND(name, fn) lua_pushcfunction(L, fn, #name); lua_setfield(L, -2, #name)
     BIND(set_color, l_set_color);
     BIND(set_clear_color, l_set_clear_color);
+    BIND(texture_ok, l_texture_ok);
     BIND(set_world_textures, l_set_world_textures);
     BIND(get_world_textures, l_get_world_textures);
     BIND(set_sort_band, l_set_sort_band);
     BIND(set_emissive, l_set_emissive);
+    BIND(set_light_volume, l_set_light_volume);
+    BIND(set_light_volume_size, l_set_light_volume_size);
+    BIND(set_light_shaft, l_set_light_shaft);
+    BIND(set_light_fill, l_set_light_fill);
+    BIND(get_light_fill, l_get_light_fill);
+    BIND(rebuild_occluders, l_rebuild_occluders);
+    BIND(set_debug_occluders, l_set_debug_occluders);
+    BIND(spawn_point_light, l_spawn_point_light);
+    BIND(set_point_light, l_set_point_light);
     BIND(spawn_light_volume, l_spawn_light_volume);
     BIND(spawn_light_shaft, l_spawn_light_shaft);
     BIND(spawn_aperture, l_spawn_aperture);

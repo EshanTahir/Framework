@@ -39,9 +39,15 @@ Entity Scene::CreateEntity(const std::string& tag)
 
 Entity Scene::GetEntity(const std::string& tag)
 {
-    if (tag_entity.find(tag) != tag_entity.end())
-        return Entity(tag_entity[tag], this);
-    return Entity(entt::null, this);
+    auto it = tag_entity.find(tag);
+    if (it == tag_entity.end())
+        return Entity(entt::null, this);
+    if (!registry.valid(it->second))
+    {
+        tag_entity.erase(it);
+        return Entity(entt::null, this);
+    }
+    return Entity(it->second, this);
 }
 
 std::vector<std::string> Scene::ListTags() const
